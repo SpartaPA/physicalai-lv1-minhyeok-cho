@@ -197,7 +197,7 @@ def row_echelon(A, pivoting: bool = True):
     U = np.array(A, dtype=float)
 
     if U.ndim != 2:
-        raise ValueError("2D matrix requried")
+        raise ValueError("2D matrix required")
     
     rows, cols = U.shape
     pivot_row = 0
@@ -254,9 +254,9 @@ def det(M) -> float:
     num_r, num_c = M.shape
 
     if num_r == 0 or num_c == 0:
-        raise ValueError("Empty or 1D matrix is not allowed")
+        raise ValueError("Empty matrix is not allowed")
 
-    if num_r != num_c: # need testing with 0x0 and 1x1
+    if num_r != num_c:
         raise ValueError(f"Square matrix required. Input shape = {num_r, num_c}")
 
     U, pivot_cols, row_swaps = row_echelon(M)
@@ -267,10 +267,7 @@ def det(M) -> float:
     if num_rank < num_r:
         return 0
 
-    for i in range(num_r):
-        U_pi *= U[i,i]
-
-    det_M = ((-1)**row_swaps) * U_pi
+    det_M = (-1) ** row_swaps * np.prod(np.diag(U))
 
     return det_M
 
