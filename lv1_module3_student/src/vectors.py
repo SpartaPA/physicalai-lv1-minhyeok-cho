@@ -37,18 +37,17 @@ __all__ = [
 
 # ---------------------------------------------------------------- 기본 연산
 
-def as_vector(v) -> np.ndarray:
-    """입력(리스트/튜플/배열)을 1차원 float 배열로 변환한다.
+def as_vector(a) -> np.ndarray:
+    """Convert a scalar or vector-shaped input to a 1D float array."""
+    v = np.asarray(a, dtype=float).reshape(-1)
 
-    1차원이 아니면 ValueError 를 던진다.
+    a_arr = np.asarray(a)
+    if a_arr.ndim > 2 or (a_arr.ndim == 2 and 1 not in a_arr.shape):
+        raise ValueError(
+            f"Scalar or vector-shaped input is required. Input shape={a_arr.shape}."
+            )
+    return v
 
-    [구현 예시] 아래 세 줄이 이 파일에서 기대하는 코드 스타일이다.
-    나머지 함수도 이런 식으로 채워 넣으면 된다.
-    """
-    arr = np.asarray(v, dtype=float)
-    if arr.ndim != 1:
-        raise ValueError(f"1차원 벡터가 필요합니다. 받은 shape={arr.shape}")
-    return arr
 
 
 def dot(a, b) -> float:
@@ -57,14 +56,20 @@ def dot(a, b) -> float:
     두 벡터의 차원이 다르면 ValueError.
     """
     # TODO: 문제 1-1
-    raise NotImplementedError("dot 을 구현하세요")
+    a, b = as_vector(a), as_vector(b)
+    if len(a) != len(b):
+        raise ValueError(f"Different number of elements: {len(a)} vs {len(b)}.")
+
+    total = 0
+    for x, y in zip(a, b):
+        total += x * y
+    return total
 
 
-def norm(v) -> float:
+def norm(a) -> float:
     """유클리드 노름. sqrt(v·v) — 위에서 만든 dot 을 재사용한다."""
     # TODO: 문제 1-1
-    raise NotImplementedError("norm 을 구현하세요")
-
+    return np.sqrt(dot(a,a))
 
 def angle_between(a, b, degrees: bool = True) -> float:
     """두 벡터 사이각. degrees=True 면 도(°), False 면 라디안.
@@ -76,10 +81,19 @@ def angle_between(a, b, degrees: bool = True) -> float:
             [-1, 1] 로 clip 해야 무작위 입력에서도 안전하다.
     """
     # TODO: 문제 1-1
-    raise NotImplementedError("angle_between 을 구현하세요")
+    norm_a, norm_b = norm(a), norm(b)
+    if np.isclose(norm_a, 0.0) or np.isclose(norm_b, 0.0):
+        raise ValueError("Cannot calculate angle for zero vector.")
+    
+    cos_theta = dot(a, b) / (norm_a * norm_b)
+    cos_theta = np.clip(cos_theta, -1, 1)
+    theta = np.arccos(cos_theta)
+    if degrees:
+        return float(np.degrees(theta))
+    return theta
 
 
-def normalize(v, eps: float = 1e-12) -> np.ndarray:
+def normalize(a, eps: float = 1e-12) -> np.ndarray:
     """단위벡터로 정규화한다. v / |v|
 
     영벡터를 어떻게 처리할지는 **문제 1-2 에서 직접 정한다.**
@@ -88,7 +102,10 @@ def normalize(v, eps: float = 1e-12) -> np.ndarray:
     선택에 따라 노트북/테스트의 검증 코드도 그 방식에 맞춰 작성한다.
     """
     # TODO: 문제 1-2
-    raise NotImplementedError("normalize 를 구현하세요")
+    n = norm(a)
+    if n < eps:
+        raise ValueError("Cannot normalize zero vector.")
+    return as_vector(a) / n
 
 
 def project(a, b) -> np.ndarray:
@@ -100,13 +117,15 @@ def project(a, b) -> np.ndarray:
     b 가 영벡터면 ValueError.
     """
     # TODO: 문제 1-3
-    raise NotImplementedError("project 를 구현하세요")
+    if np.isclose(norm(b), 0.0):
+        raise ValueError("Cannot project onto zero vector")
+    return as_vector(b) * dot(a, b) / dot(b,b)
 
 
 def reject(a, b) -> np.ndarray:
     """a 에서 b 방향 성분을 뺀 나머지(수직 성분). a = project + reject 가 성립해야 한다."""
     # TODO: 문제 1-3
-    raise NotImplementedError("reject 을 구현하세요")
+    return as_vector(a) - project(a, b)
 
 
 def skew(a) -> np.ndarray:
@@ -120,13 +139,27 @@ def skew(a) -> np.ndarray:
     3차원이 아니면 ValueError.
     """
     # TODO: 문제 1-4
-    raise NotImplementedError("skew 를 구현하세요")
+    a = as_vector(a)
+    if a.shape != (3,):
+        raise ValueError(f"3 elements required. Input shape={a.shape}")
+    a_x, a_y, a_z = a
+    return np.array([
+        [0.0, -a_z, a_y],
+        [a_z, 0.0, -a_x],
+        [-a_y, a_x, 0.0]
+    ])
 
 
 def cross(a, b) -> np.ndarray:
     """외적을 **반대칭행렬 곱으로** 계산한다 (`np.cross` 사용 금지)."""
     # TODO: 문제 1-4
-    raise NotImplementedError("cross 를 구현하세요")
+    a = as_vector(a)
+    b = as_vector(b)
+    if a.shape != (3,):
+        raise ValueError(f"3 elements required. Input shape={a.shape}")
+    if b.shape != (3,):
+        raise ValueError(f"3 elements required. Input shape b={b.shape}")
+    return skew(a) @ b
 
 
 def plane_normal(P1, P2, P3) -> np.ndarray:
@@ -136,9 +169,12 @@ def plane_normal(P1, P2, P3) -> np.ndarray:
     세 점이 일직선이면 외적이 영벡터가 되어 평면이 하나로 정해지지 않는다 -> ValueError.
     """
     # TODO: 문제 1-5
-    raise NotImplementedError("plane_normal 을 구현하세요")
-
-
+    P1, P2, P3 = as_vector(P1), as_vector(P2), as_vector(P3)
+    u, v = P2 - P1, P3 - P1
+    n = cross(u, v)
+    if np.isclose(norm(n), 0.0):
+        raise ValueError("Points are collinear; normal is undefined")
+    return normalize(n)
 # ------------------------------------------------- 가우스 소거 기반 선형대수
 
 def row_echelon(A, pivoting: bool = True):
