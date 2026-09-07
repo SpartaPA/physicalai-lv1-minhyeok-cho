@@ -188,30 +188,91 @@ def row_echelon(A, pivoting: bool = True):
     -------
     U : (m, n) 상삼각 형태 행렬
     pivot_cols : 피벗이 선 열 인덱스 리스트
-    n_swaps : 행 교환 횟수 (행렬식 부호 계산에 필요)
+    row_swaps : 행 교환 횟수 (행렬식 부호 계산에 필요)
 
     힌트: 0 인지 판정할 때는 `== 0` 대신 허용오차(tol)를 쓴다.
           예) tol = max(m, n) * np.finfo(float).eps * max(1.0, np.max(np.abs(U)))
     """
     # TODO: 문제 1-6 / 문제 4
-    raise NotImplementedError("row_echelon 을 구현하세요")
+    U = np.array(A, dtype=float)
 
+    if U.ndim != 2:
+        raise ValueError("2D matrix requried")
+    
+    rows, cols = U.shape
+    pivot_row = 0
+    row_swaps = 0
+    pivot_cols = []
+
+    tol = max(rows, cols) * np.finfo(float).eps * max(1.0, np.max(np.abs(U)))
+
+    for col in range(cols):
+        if pivot_row >= rows:
+            break
+
+        if pivoting:
+            candidates = np.abs(U[pivot_row:rows, col])
+            best = np.argmax(candidates) + pivot_row # find row with largest-magnitude pivot candidate
+        else:
+            best = pivot_row
+
+        if abs(U[best, col]) <= tol:
+            continue
+
+        if best != pivot_row:
+            U[[pivot_row, best]] = U[[best, pivot_row]]
+            row_swaps += 1
+
+        for r in range(pivot_row + 1, rows): # force M[r, col] to become 0
+            factor = U[r, col] / U[pivot_row, col]
+            U[r] -= factor * U[pivot_row]
+
+        pivot_cols.append(col)
+        pivot_row += 1
+
+    return U, pivot_cols, row_swaps
 
 def rank(A) -> int:
     """행 사다리꼴의 피벗 개수 = rank."""
     # TODO: 문제 1-6
-    raise NotImplementedError("rank 를 구현하세요")
+    _, pivot_cols, _ = row_echelon(A)
+    return len(pivot_cols)
 
 
-def det(A) -> float:
+def det(M) -> float:
     """행렬식 = 행 사다리꼴 대각성분의 곱 x (-1)^(행 교환 횟수).
 
     피벗이 n 개보다 적으면(특이행렬) 0.0 을 돌려준다.
     정사각 행렬이 아니면 ValueError.
     """
     # TODO: 문제 1-6
-    raise NotImplementedError("det 을 구현하세요")
+    M = np.asarray(M, dtype=float)
 
+    if M.ndim != 2:
+        raise ValueError("2D matrix required")
+
+    num_r, num_c = M.shape
+
+    if num_r == 0 or num_c == 0:
+        raise ValueError("Empty or 1D matrix is not allowed")
+
+    if num_r != num_c: # need testing with 0x0 and 1x1
+        raise ValueError(f"Square matrix required. Input shape = {num_r, num_c}")
+
+    U, pivot_cols, row_swaps = row_echelon(M)
+
+    U_pi = 1
+    num_rank = len(pivot_cols)
+
+    if num_rank < num_r:
+        return 0
+
+    for i in range(num_r):
+        U_pi *= U[i,i]
+
+    det_M = ((-1)**row_swaps) * U_pi
+
+    return det_M
 
 def gauss_eliminate(A, b, pivoting: bool = True, verbose: bool = False):
     """가우스 소거법 + 후진대입으로 Ax = b 를 푼다.
