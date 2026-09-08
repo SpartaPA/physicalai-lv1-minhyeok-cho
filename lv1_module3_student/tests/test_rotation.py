@@ -49,8 +49,18 @@ def rng():
 @pytest.mark.parametrize("maker", MAKERS)
 @pytest.mark.parametrize("theta", ANGLES)
 def test_columns_are_orthonormal(maker, theta):
-    # TODO: 각 열의 길이가 1 인지, 서로 다른 두 열의 내적이 0 인지 검사
-    raise NotImplementedError("test_columns_are_orthonormal 을 작성하세요")
+    R = maker(theta)
+
+    for i in range(3):
+        assert np.isclose(
+            np.linalg.norm(R[:, i]), 1.0
+        ), f"column {i} is not a unit vector"
+
+    for i in range(3):
+        for j in range(i + 1, 3):
+            assert np.isclose(
+                np.dot(R[:, i], R[:, j]), 0.0
+            ), f"columns {i} and {j} are not orthogonal"
 
 
 # --- 2. 행렬식이 1인가 --------------------------------------------------------
@@ -58,8 +68,12 @@ def test_columns_are_orthonormal(maker, theta):
 @pytest.mark.parametrize("maker", MAKERS)
 @pytest.mark.parametrize("theta", ANGLES)
 def test_determinant_is_one(maker, theta):
-    # TODO: det(R) == 1 인지 검사
-    raise NotImplementedError("test_determinant_is_one 을 작성하세요")
+    R = maker(theta)
+
+    # np.linalg.det is used here only as a verification oracle.
+    assert np.isclose(
+        np.linalg.det(R), 1.0
+    ), f"determinant is not 1: det(R)={np.linalg.det(R)}"
 
 
 # --- 3. 역행렬 == 전치 --------------------------------------------------------
@@ -67,17 +81,34 @@ def test_determinant_is_one(maker, theta):
 @pytest.mark.parametrize("maker", MAKERS)
 @pytest.mark.parametrize("theta", ANGLES)
 def test_inverse_equals_transpose(maker, theta):
-    # TODO: inv(R) == R.T 이고 R.T @ R == I 인지 검사
-    raise NotImplementedError("test_inverse_equals_transpose 를 작성하세요")
+    R = maker(theta)
+    I = np.eye(3)
+
+    # np.linalg.inv is used here only as a verification oracle.
+    assert np.allclose(
+        np.linalg.inv(R), R.T
+    ), "the inverse of a rotation matrix must equal its transpose"
+    assert np.allclose(
+        R.T @ R, I
+    ), "R.T @ R must be the identity matrix"
 
 
 # --- 4. 재직교화 결과가 직교행렬인가 -----------------------------------------
 
 def test_gram_schmidt_restores_orthogonality(rng):
-    # TODO: 회전행렬에 작은 노이즈를 섞어 직교성을 깨뜨린 뒤,
-    #       gram_schmidt 로 복구하면 직교성 오차가 기계정밀도 수준으로 줄고
-    #       det 가 1 이며 is_rotation 이 True 인지 검사
-    raise NotImplementedError("test_gram_schmidt_restores_orthogonality 를 작성하세요")
+    R = rot_z(0.4) @ rot_y(-0.7) @ rot_x(0.2)
+    noisy = R + 1e-3 * rng.standard_normal((3, 3))
+    fixed = gram_schmidt(noisy)
+
+    assert orthogonality_error(fixed) < 1e-14, (
+        "Gram-Schmidt did not restore orthogonality: "
+        f"error={orthogonality_error(fixed)}"
+    )
+    assert np.isclose(np.linalg.det(fixed), 1.0), (
+        f"reorthogonalized matrix has the wrong determinant: "
+        f"det={np.linalg.det(fixed)}"
+    )
+    assert is_rotation(fixed), "reorthogonalized matrix is not a rotation"
 
 
 # --- 여기부터는 추가 테스트 (권장) -------------------------------------------

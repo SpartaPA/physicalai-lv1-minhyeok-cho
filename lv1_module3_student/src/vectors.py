@@ -204,7 +204,8 @@ def row_echelon(A, pivoting: bool = True):
     row_swaps = 0
     pivot_cols = []
 
-    tol = max(rows, cols) * np.finfo(float).eps * max(1.0, np.max(np.abs(U)))
+    scale = max(1.0, np.max(np.abs(U))) if U.size else 1.0
+    tol = max(rows, cols) * np.finfo(float).eps * scale
 
     for col in range(cols):
         if pivot_row >= rows:
@@ -288,8 +289,78 @@ def gauss_eliminate(A, b, pivoting: bool = True, verbose: bool = False):
 
     피벗이 0 이면 해가 유일하지 않다 -> ZeroDivisionError.
     """
-    # TODO: 문제 4-1
-    raise NotImplementedError("gauss_eliminate 을 구현하세요")
+    A = np.asarray(A, dtype=float)
+    b = np.asarray(b, dtype=float).reshape(-1)
+
+    if A.ndim != 2:
+        raise ValueError("A must be a 2D matrix")
+    rows, cols = A.shape
+    if rows != cols:
+        raise ValueError("A must be square")
+    if b.shape != (rows,):
+        raise ValueError(
+            f"b must contain one value per row of A. Input shape={b.shape}"
+        )
+
+    augmented = np.column_stack((A, b))
+    steps = [augmented.copy()]
+
+    if verbose:
+        print("초기 첨가행렬 [A|b] =\n", augmented)
+
+    n = rows
+    for pivot_col in range(n - 1):
+        if pivoting:
+            pivot_row = pivot_col + int(
+                np.argmax(np.abs(augmented[pivot_col:, pivot_col]))
+            )
+        else:
+            pivot_row = pivot_col
+
+        pivot = augmented[pivot_row, pivot_col]
+        # Do not use an approximate zero test here: the notebook deliberately
+        # studies what happens when a nonzero pivot is extremely small.
+        if pivot == 0.0:
+            raise ZeroDivisionError("zero pivot; the solution is not unique")
+
+        if pivot_row != pivot_col:
+            augmented[[pivot_col, pivot_row]] = augmented[[pivot_row, pivot_col]]
+            steps.append(augmented.copy())
+            if verbose:
+                print(
+                    f"\n행 교환: {pivot_col}행 <-> {pivot_row}행\n",
+                    augmented,
+                )
+
+        for row in range(pivot_col + 1, n):
+            factor = augmented[row, pivot_col] / augmented[pivot_col, pivot_col]
+            if factor != 0.0:
+                augmented[row, pivot_col:] -= (
+                    factor * augmented[pivot_col, pivot_col:]
+                )
+            augmented[row, pivot_col] = 0.0
+            steps.append(augmented.copy())
+            if verbose:
+                print(f"\n{pivot_col}열 소거 (행 {row})\n", augmented)
+
+    if augmented[-1, -2] == 0.0:
+        raise ZeroDivisionError("zero pivot; the solution is not unique")
+
+    x = np.zeros(n, dtype=float)
+    for row in range(n - 1, -1, -1):
+        pivot = augmented[row, row]
+        if pivot == 0.0:
+            raise ZeroDivisionError("zero pivot; the solution is not unique")
+
+        rhs = augmented[row, -1]
+        for col in range(row + 1, n):
+            rhs -= augmented[row, col] * x[col]
+        x[row] = rhs / pivot
+
+    if verbose:
+        print("\n후진대입 해 x =", x)
+
+    return x, steps
 
 
 def inverse_gauss_jordan(A) -> np.ndarray:
@@ -298,5 +369,35 @@ def inverse_gauss_jordan(A) -> np.ndarray:
     정사각이 아니면 ValueError, 특이행렬이면 np.linalg.LinAlgError.
     (`np.linalg.inv` 를 부르지 말고 소거로 직접 구한다)
     """
-    # TODO: 문제 4-3
-    raise NotImplementedError("inverse_gauss_jordan 을 구현하세요")
+    A = np.asarray(A, dtype=float)
+    if A.ndim != 2 or A.shape[0] != A.shape[1]:
+        raise ValueError("A must be a square matrix")
+    n = A.shape[0]
+    if n == 0:
+        raise ValueError("Empty matrix is not allowed")
+
+    augmented = np.hstack((A.copy(), np.eye(n)))
+    scale = max(1.0, np.max(np.abs(A)))
+    tol = n * np.finfo(float).eps * scale
+
+    for col in range(n):
+        pivot_row = col + int(
+            np.argmax(np.abs(augmented[col:, col]))
+        )
+        pivot = augmented[pivot_row, col]
+        if abs(pivot) <= tol:
+            raise np.linalg.LinAlgError("Singular matrix")
+
+        if pivot_row != col:
+            augmented[[col, pivot_row]] = augmented[[pivot_row, col]]
+
+        augmented[col] /= augmented[col, col]
+
+        for row in range(n):
+            if row == col:
+                continue
+            factor = augmented[row, col]
+            if factor != 0.0:
+                augmented[row] -= factor * augmented[col]
+
+    return augmented[:, n:]
