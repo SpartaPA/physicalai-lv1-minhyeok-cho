@@ -346,6 +346,7 @@ def gauss_eliminate(A, b, pivoting: bool = True, verbose: bool = False):
     if augmented[-1, -2] == 0.0:
         raise ZeroDivisionError("zero pivot; the solution is not unique")
 
+    # Back-Propagation
     x = np.zeros(n, dtype=float)
     for row in range(n - 1, -1, -1):
         pivot = augmented[row, row]
