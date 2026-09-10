@@ -251,7 +251,8 @@ def quaternion_from_axis_angle(axis, angle: float) -> np.ndarray:
     w = np.cos(half_angle)
     xyz = axis * np.sin(half_angle)
 
-    q = np.concatenate(([w], xyz))
+    # SciPy convention: vector part first, then scalar part: (x, y, z, w).
+    q = np.concatenate((xyz, [w]))
 
     # Optional numerical cleanup
     q = normalize(q)
