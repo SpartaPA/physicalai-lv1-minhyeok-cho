@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .vectors import inverse_gauss_jordan
+from .vectors import as_vector, det, inverse_gauss_jordan
 
 __all__ = [
     "make_T",
@@ -24,94 +24,204 @@ __all__ = [
 
 
 def make_T(R, t) -> np.ndarray:
-    """회전 R(3x3)과 병진 t(3,)로 4x4 동차변환을 만든다.
+    """Return a 4x4 homogeneous transformation matrix."""
 
-        T = [[R, t],
-             [0, 1]]
+    R = np.asarray(R, dtype=float)
+    t = as_vector(t)
 
-    R 이 3x3 이 아니면 ValueError.
+    if R.shape != (3, 3):
+        raise ValueError(
+            f"3x3 matrix for R is required. "
+            f"Input shape={R.shape}."
+        )
+
+    if len(t) != 3:
+        raise ValueError(
+            f"3-element vector for t is required. "
+            f"Input shape={t.shape}."
+        )
+
+    M = np.eye(4)
+
+    M[:3, :3] = R
+    M[:3, 3] = t
+
+    return M
+
+def inv_T(M, eps=1e-12) -> np.ndarray:
+    """Return inverse of a 4x4 homogeneous transformation matrix M."""
+
+    R, t = _validate_transform(M, eps)
+
+    inv_M = np.eye(4)
+    inv_M[:3, :3] = R.T
+    inv_M[:3, 3] = -R.T @ t
+    return inv_M
+
+
+def to_homogeneous(t, w=1.0) -> np.ndarray:
+    """Return [N x 4] matrix where t is [N x 3] matrix and w is either 0 or 1."""
+
+    t = np.asarray(t, dtype=float)
+
+    if t.size == 3:
+        t = t.reshape(1, -1)
+    elif t.ndim == 2:
+        if t.shape[1] != 3:
+            raise ValueError(f"Nx3 matrix required. Input shape = {t.shape}.")
+    else:
+        raise ValueError(f"2D matrix required. Input dimension = {t.ndim}.")
+
+
+    w = float(w)
+    if w not in (0.0, 1.0):
+        raise ValueError(f"w shall be either 1 or 0. Input w = {w}.")
+
+    w = np.full((t.shape[0], 1), w)
+
+    return np.concatenate((t, w), axis=1)
+
+
+def _validate_transform(M, eps=1e-12):
+    M = np.asarray(M, dtype=float)
+    if M.shape != (4, 4):
+        raise ValueError(f"4x4 matrix required. Input shape = {M.shape}.")
+    if not np.allclose(M[3, :], [0., 0., 0., 1.], atol=eps, rtol=0.0):
+        raise ValueError(f"Homogeneous matrix required. Bottom row: {M[3,:]}")
+    R = M[:3, :3]
+    if not (
+        np.allclose(R.T @ R, np.eye(3), atol=eps, rtol=0.0)
+        and np.isclose(det(R), 1.0, atol=eps, rtol=0.0)
+    ):
+        raise ValueError(f"Proper rotation matrix required. R:\n{R}")
+    return R, M[:3, 3]
+
+
+def transform_point(M, p, eps=1e-12) -> np.ndarray:
+    """Return point p transformed by a 4x4 homogeneous transformation."""
+
+    R, t = _validate_transform(M, eps)
+
+    p = as_vector(p)
+
+    if len(p) != 3:
+        raise ValueError(
+            f"Require p of 3 elements. "
+            f"Input shape = {p.shape}."
+        )
+
+    return R @ p + t
+
+
+def transform_direction(M, p, eps=1e-12) -> np.ndarray:
+    """Return direction p transformed by a 4x4 homogeneous transformation."""
+
+    R, _ = _validate_transform(M, eps)
+
+    p = as_vector(p)
+
+    if len(p) != 3:
+        raise ValueError(
+            f"Require p of 3 elements. "
+            f"Input shape = {p.shape}."
+        )
+
+    return R @ p
+
+
+def transform_points(M, P, w=1.0, eps=1e-12) -> np.ndarray:
+    """Transform a point or point cloud using a homogeneous transform.
+
+    ``w=1`` applies rotation and translation; ``w=0`` applies rotation only.
+    A single ``(3,)`` input returns ``(3,)`` and an ``(N, 3)`` input returns
+    ``(N, 3)``.
     """
-    # TODO: 문제 5-1
-    raise NotImplementedError("make_T 를 구현하세요")
+
+    R, t = _validate_transform(M, eps)
+
+    P = np.asarray(P, dtype=float)
+    single = False
+
+    if P.ndim == 1 and P.shape == (3,):
+        P = P.reshape(1, 3)
+        single = True
+    elif P.ndim != 2 or P.shape[0] == 0 or P.shape[1] != 3:
+        raise ValueError(f"P must have shape (3,) or (N, 3). Input shape = {P.shape}")
+
+    w = float(w)
+    if w not in (0.0, 1.0):
+        raise ValueError(f"w shall be either 1 or 0. Input w = {w}.")
+
+    result = (R @ P.T + w * t[:, None]).T
+    return result[0] if single else result
 
 
-def inv_T(T) -> np.ndarray:
-    """동차변환의 역변환. **일반 역행렬 함수를 쓰지 않고** 공식으로 구한다.
+def inv_T_batch(T, eps=1e-12) -> np.ndarray:
+    """Return inverse of homogeneous transformation matrices
+    Input: N x (4 x 4) array"""
+    T = np.asarray(T, dtype=float)
 
-        T^-1 = [[R^T, -R^T t],
-                [  0,      1]]
+    # Confirm input
+    if T.ndim != 3 or T.shape[1:] != (4, 4):
+        raise ValueError(
+            f"Input must have shape (N, 4, 4). "
+            f"Input shape={T.shape}."
+        )
 
-    유도: T^-1 을 [[S, u], [0, 1]] 로 두고 T T^-1 = I 를 풀면
-          R S = I -> S = R^T (R 이 직교),  R u + t = 0 -> u = -R^T t.
+    if not np.allclose(
+        T[:,3, :],
+        np.array([0., 0., 0., 1.]),
+        atol=eps,
+        rtol=0.0,
+        ):
+        raise ValueError(f"Homogeneous matrix required. Current bottom rows: {T[:,3,:]}")
 
-    4x4 가 아니면 ValueError.
-    """
-    # TODO: 문제 5-1
-    raise NotImplementedError("inv_T 를 구현하세요")
+    R = T[:, :3, :3]
+    R_T = np.swapaxes(R, 1, 2)
 
+    if R.shape[0] > 0:
+        if np.max(np.abs(R_T @ R - np.eye(3))) > eps:
+            raise ValueError(f"Proper rotation matrices are required. Rs:\n{R}")
 
-def inv_T_batch(Ts) -> np.ndarray:
-    """(N, 4, 4) 동차변환 묶음을 **반복문 없이** 한 번에 역변환한다.
+        det_R = (
+            R[:, 0, 0] * (R[:, 1, 1] * R[:, 2, 2] - R[:, 1, 2] * R[:, 2, 1])
+            - R[:, 0, 1] * (R[:, 1, 0] * R[:, 2, 2] - R[:, 1, 2] * R[:, 2, 0])
+            + R[:, 0, 2] * (R[:, 1, 0] * R[:, 2, 1] - R[:, 1, 1] * R[:, 2, 0])
+        )
+        if np.max(np.abs(det_R - 1.0)) > eps:
+            raise ValueError(f"Proper rotation matrices are required. Rs:\n{R}")
 
-    `inv_T` 와 같은 공식을 배치 축으로 확장한 것이다.
-    문제 5-4 의 속도 비교에서 쓴다 — 단건 호출은 파이썬/NumPy 호출 오버헤드가
-    지배해서 연산량 차이가 드러나지 않기 때문이다.
+    T_result = np.zeros_like(T)
 
-    힌트: 전치는 `np.swapaxes(..., 1, 2)`, 배치 행렬-벡터 곱은
-          `np.einsum("nij,nj->ni", ...)` 로 쓸 수 있다.
-    """
-    # TODO: 문제 5-4
-    raise NotImplementedError("inv_T_batch 를 구현하세요")
+    T_result[:, :3, :3] = R_T
+    T_result[:, :3, 3] = -np.einsum("nij,nj->ni", R_T, T[:, :3, 3])
+    T_result[:, 3, 3] = 1
 
-
-def to_homogeneous(P, w: float = 1.0) -> np.ndarray:
-    """(3,) 또는 (N,3) 좌표에 마지막 성분 w 를 붙인다.
-
-    w = 1 이면 점(위치), w = 0 이면 방향(벡터).
-    """
-    # TODO: 문제 5-2
-    raise NotImplementedError("to_homogeneous 를 구현하세요")
-
-
-def transform_point(T, p) -> np.ndarray:
-    """점 변환 (w = 1): 회전과 병진이 모두 적용된다. 반환은 (3,)."""
-    # TODO: 문제 5-2
-    raise NotImplementedError("transform_point 를 구현하세요")
-
-
-def transform_direction(T, v) -> np.ndarray:
-    """방향 변환 (w = 0): 회전만 적용되고 병진은 무시된다. 반환은 (3,)."""
-    # TODO: 문제 5-2
-    raise NotImplementedError("transform_direction 을 구현하세요")
+    return T_result
 
 
-def transform_points(T, P, w: float = 1.0) -> np.ndarray:
-    """(N,3) 점군을 **반복문 없이** 한 번에 변환한다. (3,) 입력도 받아야 한다.
+def least_squares_normal_equation(A, b) -> tuple[np.ndarray, np.ndarray]:
+    """Return the normal-equation solution and residual ``r = b - A @ x``."""
+    A = np.asarray(A, dtype=float)
+    b = np.asarray(b, dtype=float)
 
-    힌트: (T @ P_h.T).T 대신 P_h @ T.T 를 쓰면 전치가 한 번으로 끝나고
-          메모리 접근도 행 방향이라 캐시에 유리하다.
-    """
-    # TODO: 문제 5-2 / 6-2
-    raise NotImplementedError("transform_points 를 구현하세요")
+    if A.ndim == 2 and b.ndim == 1:
+        if A.shape[0] != b.shape[0] or A.shape[1] != 12 or b.shape[0] % 3 != 0:
+            raise ValueError(f"A and b shall have shape of (3N, 12) and (3N,), respectively.\n"
+                             f"Current input shape of A and b: {A.shape} and {b.shape}")
 
+    else:
+        raise ValueError(f"A and b shall be 2D matrix and 1D vector, respectively.\n\
+                         Current input dimension of A and b: {A.shape} and {b.shape}")
 
-def least_squares_normal_equation(A, b):
-    """정규방정식 (A^T A) x = A^T b 를 직접 세워 최소자승해를 구한다.
-
-    - (A^T A) 의 역행렬은 문제 4 에서 만든 `inverse_gauss_jordan` 으로 구한다
-      (`np.linalg.lstsq` 는 노트북에서 **비교 대상**으로만 쓴다).
-    - 근거: 잔차 r = b - A x 가 최소일 때 r 은 A 의 열공간에 수직이므로 A^T r = 0.
-
-    Returns
-    -------
-    x : 최소자승해
-    residual : b - A x
-    """
-    # TODO: 문제 5-5
-    raise NotImplementedError("least_squares_normal_equation 을 구현하세요")
+    normal_matrix = A.T @ A
+    x_approx = inverse_gauss_jordan(normal_matrix) @ (A.T @ b)
+    r = b - A @ x_approx
+    return x_approx, r
 
 
-def rmse(residual) -> float:
-    """잔차의 RMSE = sqrt(mean(r^2))."""
-    # TODO: 문제 5-5
-    raise NotImplementedError("rmse 를 구현하세요")
+def rmse(r) -> float:
+    r = np.asarray(r, dtype=float)
+    if r.size == 0:
+        raise ValueError("Cannot calculate RMSE of an empty residual.")
+    return float(np.sqrt(np.mean(r**2)))

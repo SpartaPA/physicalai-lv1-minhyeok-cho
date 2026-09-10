@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 
 from .rotation import axis_angle_from_matrix, rot_x, rot_y, rot_z
-from .transform import inv_T, make_T, transform_points
+from .transform import inv_T, make_T, transform_points, to_homogeneous
 
 __all__ = ["CoordinateChain", "default_chain", "camera_point_to_base", "base_point_to_camera"]
 
@@ -62,7 +62,12 @@ class CoordinateChain:
         root 에 연결되어 있지 않으면 KeyError.
         """
         # TODO: 문제 6-1
-        raise NotImplementedError("_path_to_root 를 구현하세요")
+        path = [frame]
+        while frame != self.root:
+            lookup = self._parent[frame]
+            path.append(lookup)
+            frame = lookup
+        return path
 
     def T_from_root(self, frame: str) -> np.ndarray:
         """root 기준 frame 의 자세 T(root <- frame).
@@ -72,15 +77,22 @@ class CoordinateChain:
             T(base<-camera) = T(base<-link) @ T(link<-camera)
         """
         # TODO: 문제 6-1
-        raise NotImplementedError("T_from_root 를 구현하세요")
-
+        T_updated = np.eye(4)
+        while frame != self.root:
+            lookup = self._parent[frame]
+            T_updated = self._T[(lookup, frame)] @ T_updated
+            frame = lookup
+        return T_updated
+     
     def T(self, target: str, source: str) -> np.ndarray:
         """source 좌표를 target 좌표로 바꾸는 변환 T(target <- source).
 
         힌트: T(target<-source) = inv(T(root<-target)) @ T(root<-source)
         """
         # TODO: 문제 6-1
-        raise NotImplementedError("T 를 구현하세요")
+        root_target = self.T_from_root(target)
+        root_source = self.T_from_root(source)
+        return inv_T(root_target) @ root_source
 
     def transform(self, target: str, source: str, P, w: float = 1.0) -> np.ndarray:
         """source 프레임의 점(w=1) 또는 방향(w=0)을 target 프레임으로 변환한다.
@@ -88,12 +100,19 @@ class CoordinateChain:
         (3,) 와 (N,3) 을 모두 지원해야 하고, **반복문을 쓰지 않는다**.
         """
         # TODO: 문제 6-2
-        raise NotImplementedError("transform 을 구현하세요")
+        T_target_source = T(target, source)
+        P = to_homogeneous(P, w)
+        return (P @ T_target_source.T)[:,:3]
 
     def axis_angle(self, target: str, source: str):
         """T(target <- source) 의 회전 부분에서 회전축과 회전각을 복원한다."""
         # TODO: 문제 6-4
-        raise NotImplementedError("axis_angle 을 구현하세요")
+        R = T(target, source)[:3,:3]
+        return axis_angle_from_matrix(R)
+
+
+
+
 
 
 def default_chain() -> CoordinateChain:
@@ -106,10 +125,9 @@ def default_chain() -> CoordinateChain:
     link -> camera : y축 -22.5도, x축 67.5도 회전(y 먼저 곱함: rot_y @ rot_x) 후 (0.12, 0.04, 0.18) m 이동
     """
     # TODO: 문제 6-1
-    #   T_base_link   = make_T(rot_z(...), [...])
-    #   T_link_camera = make_T(rot_y(...) @ rot_x(...), [...])
-    #   return CoordinateChain("base").add(...).add(...)
-    raise NotImplementedError("default_chain 을 구현하세요")
+    T_base_link   = make_T(rot_z(22.5), [0.35, 0.05, 0.45])
+    T_link_camera = make_T(rot_y(-22.5) @ rot_x(67.5), [0.12, 0.04, 0.18])
+    return CoordinateChain("base").add("base", "link", T_base_link).add("link", "camera", T_link_camera)
 
 
 def camera_point_to_base(p_cam, chain: CoordinateChain | None = None) -> np.ndarray:
@@ -118,10 +136,34 @@ def camera_point_to_base(p_cam, chain: CoordinateChain | None = None) -> np.ndar
     chain 이 None 이면 default_chain() 을 쓴다.
     """
     # TODO: 문제 6-1
-    raise NotImplementedError("camera_point_to_base 를 구현하세요")
+    if t.size == 3:
+        t = t.reshape(1, -1)
+    elif t.ndim == 2:
+        if t.shape[1] != 3:
+            raise ValueError(f"Nx3 matrix required. Input shape = {t.shape}.")
+    else:
+        raise ValueError(f"2D matrix required. Input dimension = {t.ndim}.")
+
+    if chain == None:
+        return default_chain() @ p_cam
+
+    _, _ = _validate_transform(chain)
+    return chain @ p_cam
 
 
 def base_point_to_camera(p_base, chain: CoordinateChain | None = None) -> np.ndarray:
     """base 기준 좌표 -> 카메라 기준 좌표. 왕복 검증(문제 6-2)에 쓴다."""
     # TODO: 문제 6-2
-    raise NotImplementedError("base_point_to_camera 를 구현하세요")
+    if t.size == 3:
+        t = t.reshape(1, -1)
+    elif t.ndim == 2:
+        if t.shape[1] != 3:
+            raise ValueError(f"Nx3 matrix required. Input shape = {t.shape}.")
+    else:
+        raise ValueError(f"2D matrix required. Input dimension = {t.ndim}.")
+
+    if chain == None:
+        return default_chain() @ p_base
+
+    _, _ = _validate_transform(chain)
+    return inv_T(chain) @ p_base
