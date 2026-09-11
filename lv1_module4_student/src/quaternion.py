@@ -16,6 +16,19 @@ import numpy as np
 
 __all__ = ["matrix_to_quaternion", "quaternion_to_matrix", "slerp", "lerp_quat", "quat_angle"]
 
+def _validate_rotation(R, eps=1e-12):
+    R = np.asarray(R, dtype=float)
+
+    if R.shape != (3, 3):
+        raise ValueError(f"3x3 matrix required. Input shape = {R.shape}.")
+
+    if not (
+        np.allclose(R.T @ R, np.eye(3), atol=eps, rtol=0.0)
+        and np.isclose(det(R), 1.0, atol=eps, rtol=0.0)
+    ):
+        raise ValueError(f"Proper rotation matrix required. R:\n{R}")
+
+    return R
 
 def matrix_to_quaternion(R) -> np.ndarray:
     """회전행렬 (3,3) -> 단위 쿼터니언 (x, y, z, w).
@@ -31,6 +44,20 @@ def matrix_to_quaternion(R) -> np.ndarray:
     반환값은 반드시 정규화하고, w >= 0 이 되도록 부호를 맞춘다 (비교가 편해진다).
     """
     # TODO: 문제 3-1
+    R = _validate_rotation(R)
+    t = np.trace(R) # trace(R) = 1 + 2cos(theta) = 4 * w**2 - 1
+    if t > 0:
+        w = np.sqrt(1 + t) / 2
+        x = R[2, 1] - R[1, 2]
+        y = R[0, 2] - R[2, 0]
+        z = R[1, 0] - R[0, 1]
+    else: # t <= 0
+        diag_R = np.diag(R) # [R[0, 0], R[1, 1], R[1, 1]]
+        if diag_R[0] >= diag_R[1] and diag_R[0] >= diag_R[2]:
+            # x is the first to be calculated
+            x = np.sqrt(1 + diag_R[0] - diag_R[2] - diag_R[2]) / 2
+            y = 
+        
     raise NotImplementedError("matrix_to_quaternion 을 구현하세요")
 
 
