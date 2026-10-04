@@ -1,0 +1,3 @@
+Motor 42: 0 RPM
+Motor 42: 120 RPM
+Readback: 120 RPM

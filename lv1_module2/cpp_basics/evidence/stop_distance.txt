@@ -1,0 +1,1 @@
+Enter speed (m/s) and friction coefficient: Stopping distance: 10.194 m

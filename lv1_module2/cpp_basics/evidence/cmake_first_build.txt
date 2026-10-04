@@ -1,0 +1,40 @@
+/usr/bin/cmake -S/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics -B/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake --check-build-system CMakeFiles/Makefile.cmake 0
+Re-run cmake file: Makefile older than: ../../CMakeLists.txt
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake
+/usr/bin/cmake -E cmake_progress_start /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake/CMakeFiles /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake//CMakeFiles/progress.marks
+/usr/bin/gmake  -f CMakeFiles/Makefile2 all
+gmake[1]: Entering directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+/usr/bin/gmake  -f CMakeFiles/stop_distance.dir/build.make CMakeFiles/stop_distance.dir/depend
+gmake[2]: Entering directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+cd /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake/CMakeFiles/stop_distance.dir/DependInfo.cmake --color=
+Dependencies file "CMakeFiles/stop_distance.dir/stop_distance.cpp.o.d" is newer than depends file "/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake/CMakeFiles/stop_distance.dir/compiler_depend.internal".
+Consolidate compiler generated dependencies of target stop_distance
+gmake[2]: Leaving directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+/usr/bin/gmake  -f CMakeFiles/stop_distance.dir/build.make CMakeFiles/stop_distance.dir/build
+gmake[2]: Entering directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+[ 20%] Building CXX object CMakeFiles/stop_distance.dir/stop_distance.cpp.o
+/usr/bin/c++   -Wall -Wextra -std=c++17 -MD -MT CMakeFiles/stop_distance.dir/stop_distance.cpp.o -MF CMakeFiles/stop_distance.dir/stop_distance.cpp.o.d -o CMakeFiles/stop_distance.dir/stop_distance.cpp.o -c /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/stop_distance.cpp
+[ 40%] Linking CXX executable stop_distance
+/usr/bin/cmake -E cmake_link_script CMakeFiles/stop_distance.dir/link.txt --verbose=1
+/usr/bin/c++ CMakeFiles/stop_distance.dir/stop_distance.cpp.o -o stop_distance 
+gmake[2]: Leaving directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+[ 40%] Built target stop_distance
+/usr/bin/gmake  -f CMakeFiles/motor_test.dir/build.make CMakeFiles/motor_test.dir/depend
+gmake[2]: Entering directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+cd /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake/CMakeFiles/motor_test.dir/DependInfo.cmake --color=
+gmake[2]: Leaving directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+/usr/bin/gmake  -f CMakeFiles/motor_test.dir/build.make CMakeFiles/motor_test.dir/build
+gmake[2]: Entering directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+[ 60%] Building CXX object CMakeFiles/motor_test.dir/main.cpp.o
+/usr/bin/c++   -Wall -Wextra -std=c++17 -MD -MT CMakeFiles/motor_test.dir/main.cpp.o -MF CMakeFiles/motor_test.dir/main.cpp.o.d -o CMakeFiles/motor_test.dir/main.cpp.o -c /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/main.cpp
+[ 80%] Building CXX object CMakeFiles/motor_test.dir/motor.cpp.o
+/usr/bin/c++   -Wall -Wextra -std=c++17 -MD -MT CMakeFiles/motor_test.dir/motor.cpp.o -MF CMakeFiles/motor_test.dir/motor.cpp.o.d -o CMakeFiles/motor_test.dir/motor.cpp.o -c /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/motor.cpp
+[100%] Linking CXX executable motor_test
+/usr/bin/cmake -E cmake_link_script CMakeFiles/motor_test.dir/link.txt --verbose=1
+/usr/bin/c++ CMakeFiles/motor_test.dir/main.cpp.o CMakeFiles/motor_test.dir/motor.cpp.o -o motor_test 
+gmake[2]: Leaving directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+[100%] Built target motor_test
+gmake[1]: Leaving directory '/home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake'
+/usr/bin/cmake -E cmake_progress_start /home/grant/physicalai-lv1-minhyeok-cho/lv1_module2/cpp_basics/build/cmake/CMakeFiles 0
